@@ -1,6 +1,7 @@
 import mongoose , {Schema} from "mongoose"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
+import crypto from "crypto"
 
 const userSchema = Schema({
     name : {
@@ -13,7 +14,7 @@ const userSchema = Schema({
         trim : true,
         unique :true,
         required :true,
-        lowecase :true,
+        lowercase :true,
     },
     password : {
         type : String,
@@ -62,14 +63,14 @@ userSchema.methods.comparePassword = async function(password){
     return await bcrypt.compare(password , this.password)
 };
 
-userSchema.methods.generateAccessToken = function(){
+userSchema.methods.generateAccessToken = async function(){
     return jwt.sign(
         {
             id : this._id,
             role : this.role,
         },
         process.env.ACCESS_TOKEN_SECRET,
-        {expiresIn : process.eventNames.ACCESS_TOKEN_EXPIRY},
+        {expiresIn : process.env.ACCESS_TOKEN_EXPIRY},
 
     )
 };
@@ -83,6 +84,17 @@ userSchema.methods.generateRefreshToken = function(){
         process.env.REFRESH_TOKEN_SECRET,
         {expiresIn : process.env.REFRESH_TOKEN_EXPIRY},
     )
+};
+
+userSchema.methods.generateAccessAndRefreshTokens = async function() {
+    try {
+        const accessToken = this.generateAccessToken();
+        const refreshToken = this.generateRefreshToken();
+
+        return { accessToken, refreshToken };
+    } catch (error) {
+        throw new ApiError(500, "Something went wrong while generating tokens");
+    }
 };
 
 const User = mongoose.model("User" , userSchema);
