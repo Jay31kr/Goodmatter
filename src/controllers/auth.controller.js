@@ -17,7 +17,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   if (existingUser) throw new ApiError(409, "User with this email already exists");
 
   const { plainOtp, hashedOtp } = generateOtp();
-  const otpExpiry = getOtpExpiry(10); // 10 minutes
+  const otpExpiry = getOtpExpiry(10); 
 
   const user = await User.create({
     name,
@@ -160,4 +160,76 @@ export const logOut = asyncHandler(async(req,res)=>{
         {},
         "User LoggedOut SucessFully"
       );
+});
+
+//resend-otp
+export const resendOtp = asyncHandler(async(req, res) => {
+  const { email } = req.validatedData;
+  const user = await User.findOne({ email }).select("+otpHash +otpSentAt");
+
+  if (!user) {
+    return res.status(200).json(
+      new ApiResponse(200, {}, "If a user is registered with this email, an OTP has been sent.")
+    );
+  }
+
+  if (user.isEmailVerified) {
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Account is already verified. Please login.")
+    );
+}
+
+  const waitTime = 2 * 60 * 1000; 
+  if (user.otpSentAt && (Date.now() - user.otpSentAt.getTime()) < waitTime) {
+    throw new ApiError(429, "Please wait 2 minutes before requesting a new OTP.");
+  }
+
+  const { plainOtp, hashedOtp } = generateOtp();
+  const otpExpiry = getOtpExpiry(10); 
+
+  user.otpHash = hashedOtp;
+  user.otpExpiry = otpExpiry;
+  user.otpSentAt = new Date();
+  await user.save();
+
+  try {
+    const htmlContent = verificationEmailTemplate(plainOtp, user.name);
+    await sendMail(
+      user.email,
+      "Verify Your GoodMatter Account",
+      htmlContent
+    );
+  } catch (error) {
+    throw new ApiError(500, `Email service error: ${error.message}`);
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, {}, "OTP sent successfully")
+  );
+});
+
+export const resetTokens = asyncHandler(async (req , res)=>{
+  const user = req.user;
+
+  const { accessToken, refreshToken } = await user.generateAccessAndRefreshTokens();
+  const hashedRefreshToken = crypto.createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+  await user.save();
+
+  return res.status(200)
+            .cookie("accessToken" , accessToken, cookieOptions)
+            .cookie("refreshToken" , refreshToken , cookieOptions)
+            .json(
+              new ApiResponse(
+                200,
+                {
+                  id:user.id,
+                  name :user.name,
+                  email : user.email,
+                  role : user.role
+                },
+                "Token Refreshed Successfully"
+              )
+            )
 });

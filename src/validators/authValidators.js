@@ -52,3 +52,11 @@ export const logInSchema =z.object({
     .regex(/[a-z]/, "Password must contain one lowercase letter")
     .regex(/[0-9]/, "Password must contain one number"),
 });
+
+export const resendOtpSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email("Invalid email address"),
+});
