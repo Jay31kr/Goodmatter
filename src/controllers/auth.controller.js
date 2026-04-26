@@ -24,7 +24,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     role,
-    otpHash:  hashedOtp,
+    otpHash: hashedOtp,
     otpExpiry: otpExpiry,
     otpSentAt: new Date(),
   });
@@ -36,7 +36,7 @@ export const registerUser = asyncHandler(async (req, res) => {
     await sendMail(
       user.email,
       "Verify Your GoodMatter Account",
-     htmlContent,
+      htmlContent,
     );
 
   } catch (error) {
@@ -77,10 +77,10 @@ export const verifyEmail = asyncHandler(async (req, res) => {
 
   const { accessToken, refreshToken } = await user.generateAccessAndRefreshTokens();
   const hashedRefreshToken = crypto.createHash("sha256")
-                              .update(refreshToken)
-                              .digest("hex");
-                              
-  user.refreshTokenHash=hashedRefreshToken;
+    .update(refreshToken)
+    .digest("hex");
+
+  user.refreshTokenHash = hashedRefreshToken;
   await user.save();
 
   return res.
@@ -102,4 +102,62 @@ export const verifyEmail = asyncHandler(async (req, res) => {
         "email verifed and logged in successfully"
       )
     );
+});
+
+//login
+
+export const logIn = asyncHandler(async (req, res) => {
+  const { email, password } = req.validatedData;
+
+  const user = await User.findOne({ email }).select("+password +refreshTokenHash");
+  if (!user) throw new ApiError(404, "no user found with the email");
+
+  const isPasswordMatch = await user.comparePassword(password);
+  if (!isPasswordMatch) throw new ApiError(401, "Incorrect Credentials");
+
+  const { accessToken, refreshToken } = await user.generateAccessAndRefreshTokens();
+  const hashedRefreshToken = crypto.createHash("sha256")
+    .update(refreshToken)
+    .digest("hex");
+
+  user.refreshTokenHash = hashedRefreshToken;
+  await user.save();
+
+  res
+    .status(200)
+    .cookie("accessToken", accessToken, cookieOptions) 
+    .cookie("refreshToken", refreshToken, cookieOptions)
+    .json(new ApiResponse(
+      200,
+      {
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      },
+      "Logged in successfully"
+    ));
+});
+
+
+//logout
+export const logOut = asyncHandler(async(req,res)=>{
+  
+    const user = req.user
+
+    if(!user) throw new ApiError(404,"USer not found");
+
+    user.refreshTokenHash=null;
+    await user.save();
+
+    return res.status(200)
+      .clearCookie("accessToken" , cookieOptions)
+      .clearCookie("refreshToken" , cookieOptions)
+      .json(
+        200,
+        {},
+        "User LoggedOut SucessFully"
+      );
 });

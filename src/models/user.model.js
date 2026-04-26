@@ -63,10 +63,11 @@ userSchema.methods.comparePassword = async function(password){
     return await bcrypt.compare(password , this.password)
 };
 
-userSchema.methods.generateAccessToken = async function(){
+userSchema.methods.generateAccessToken =  function(){
     return jwt.sign(
         {
             id : this._id,
+            email:this.email,
             role : this.role,
         },
         process.env.ACCESS_TOKEN_SECRET,
@@ -79,6 +80,7 @@ userSchema.methods.generateRefreshToken = function(){
     return jwt.sign(
         {
             id:this._id,
+            email:this.email,
             role : this.role,
         },
         process.env.REFRESH_TOKEN_SECRET,
@@ -90,7 +92,6 @@ userSchema.methods.generateAccessAndRefreshTokens = async function() {
     try {
         const accessToken = this.generateAccessToken();
         const refreshToken = this.generateRefreshToken();
-
         return { accessToken, refreshToken };
     } catch (error) {
         throw new ApiError(500, "Something went wrong while generating tokens");
