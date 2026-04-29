@@ -5,7 +5,7 @@ import { ApiResponse } from "../utils/apiResponse.js";
 import { sendMail } from "../services/mail.service.js";
 import { generateOtp, getOtpExpiry, verifyOtp } from "../utils/otp.js";
 import { verificationEmailTemplate } from "../utils/emailTemplates.js";
-import cookieOptions from "../constants/constant.js"
+import cookieOptions from "../constants/auth.constant.js"
 import crypto from "crypto";
 
 //signin
