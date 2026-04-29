@@ -1,7 +1,7 @@
-export const validate = (schema) => (req, res, next) => {
-  console.log("validate reach")
-  const result = schema.safeParse(req.body);
+import { ApiError } from "../utils/apiError.js";
 
+export const validate = (schema) => (req, res, next) => {
+  const result = schema.safeParse(req.body);
   if (!result.success) {
     console.log("fails");
     // FIX: Added ?. to prevent "reading properties of undefined"
