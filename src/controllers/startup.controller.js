@@ -148,3 +148,79 @@ export const deletePitchDeck = asyncHandler(async (req, res) => {
       )
     );
 })
+
+//get startup details
+export const getMyStartup = asyncHandler(async(req,res)=>{
+  const user = req.user;
+
+  const existingStartup = await Startup.findOne({ founder: user._id })
+                      .select("-__v -createdAt -updatedAt -pitchDeck.publicId");
+
+  if(!existingStartup) throw new ApiError(404,"startup not found");
+
+  return res.status(200).
+        json(
+          new ApiResponse(
+            200,
+            existingStartup,
+            "Startup fetched successfully"
+          )
+        )
+});
+
+export const getStartups = asyncHandler(async(req,res)=>{
+  const {
+     sector,
+    stage,
+    minTeamSize,
+    maxTeamSize,
+    minRevenue,
+    maxRevenue,
+    page,
+    limit,    
+  }=req.validatedData;
+
+  const filter={};
+
+  if(sector) filter.sector=sector;
+  if(stage) filter.stage=stage;
+
+  if(minTeamSize!=undefined || maxTeamSize!=undefined){
+    filter.teamSize ={};
+     if (minTeamSize !== undefined) filter.teamSize.$gte = minTeamSize;
+    if (maxTeamSize !== undefined) filter.teamSize.$lte = maxTeamSize;
+  }
+
+   if(minRevenue!=undefined || maxRevenue!=undefined){
+    filter.revenue ={};
+     if (minRevenue !== undefined) filter.revenue.$gte = minTeamSize;
+    if (maxRevenue !== undefined) filter.revenue.$lte = maxTeamSize;
+  }
+
+    const startups = await Startup.find(filter)
+    .select(
+      "startupName sector stage raiseGoal amountRaised revenue teamSize bio website pitchDeck founder"
+    )
+    .populate("founder", "name email")
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .sort({ createdAt: -1 });
+
+  const total = await Startup.countDocuments(filter);
+  
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        startups,
+        pagination : {
+           total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        }
+      },
+      "Startups fetched successfully"
+    )
+  );
+});

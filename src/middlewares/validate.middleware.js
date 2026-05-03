@@ -1,18 +1,23 @@
 import { ApiError } from "../utils/apiError.js";
 
-export const validate = (schema) => (req, res, next) => {
-  const result = schema.safeParse(req.body);
+export const validate = (schema, source = "body") => (req, res, next) => {
+  const dataToValidate = req[source];
+  console.log(dataToValidate);
+
+  const result = schema.safeParse(dataToValidate);
+
   if (!result.success) {
-    console.log("fails");
-    // FIX: Added ?. to prevent "reading properties of undefined"
-    const errorMessages = result.error?.errors?.map((err) => ({
-      field: err.path.join("."),
-      message: err.message,
-    })) || [];
-    
-    return next(new ApiError(400, "Validation failed!!", errorMessages));
+    const errorMessages =
+      result.error?.issues?.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      })) || [];
+
+    return next(new ApiError(400, "Validation failed", errorMessages));
   }
 
+  // store validated data separately per source
   req.validatedData = result.data;
+
   next();
 };
