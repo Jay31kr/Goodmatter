@@ -10,7 +10,7 @@ import { removeLocalFile } from "../utils/file.js";
 //complete profile
 export const completeStartupProfile = asyncHandler(async (req, res) => {
   const user = req.user;
-  const data = req.validatedData;
+  const data = req.validatedData.body;
 
   if (user.role !== "startup") throw new ApiError(403, "Only startup users can create startup profile");
 
@@ -36,7 +36,7 @@ export const completeStartupProfile = asyncHandler(async (req, res) => {
 //update profile
 export const updateStartupProfile = asyncHandler(async (req, res) => {
   const user = req.user;
-  const data = req.validatedData;
+  const data = req.validatedData.body;
 
   if (user.role !== "startup") {
     throw new ApiError(403, "User not allowed to update profile");
@@ -178,7 +178,7 @@ export const getStartups = asyncHandler(async(req,res)=>{
     maxRevenue,
     page,
     limit,    
-  }=req.validatedData;
+  }=req.validatedData.query;
 
   const filter={};
 

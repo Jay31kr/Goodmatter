@@ -16,8 +16,15 @@ export const validate = (schema, source = "body") => (req, res, next) => {
     return next(new ApiError(400, "Validation failed", errorMessages));
   }
 
-  // store validated data separately per source
-  req.validatedData = result.data;
+  if (!req.validatedData) {
+    req.validatedData = {
+      body: {},
+      query: {},
+      params: {},
+    };
+  }
+
+  req.validatedData[source] = result.data;
 
   next();
 };

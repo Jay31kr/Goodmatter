@@ -1,66 +1,92 @@
-import mongoose, { Schema } from "mongoose"
-import { maxLength } from "zod"
-import { required } from "zod/mini"
+import mongoose, { Schema } from "mongoose";
 
-const dealSchema = new Schema({
+const dealSchema = new Schema(
+  {
     investor: {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
     },
 
     startup: {
-        type: Schema.Types.ObjectId,
-        ref: "Startup",
-        required: true,
+      type: Schema.Types.ObjectId,
+      ref: "Startup",
+      required: true,
+      index: true,
     },
 
     message: {
-        type: String,
-        trim: true,
-        maxLength: [1000, "Message cannot exceed 1000 characters"]
+      type: String,
+      trim: true,
+      maxlength: [1000, "Message cannot exceed 1000 characters"],
     },
 
     offerAmount: {
-        type: Number,
-        required: true,
-        min: [10000, "Offer amount cannot be negative"],
+      type: Number,
+      required: true,
+      min: [10000, "Offer must be at least 10,000"],
     },
 
     status: {
-        type: String,
-        enum: [
-            "interested",
-            "in_discussion",
-            "negotiating",
-            "accepted",
-            "rejected",
-            "closed",
-        ],
-        default: "interested",
+      type: String,
+      enum: ["interested", "accepted", "rejected", "withdrawn", "closed"],
+      default: "interested",
+      index: true,
     },
-    closedAt: {
-        type: Date,
-    },
-}, {
-    timestamps: true,
-});
 
-dealSchema.index({ investor: 1, startup: 1 }, { unique: true });
+    acceptedAt: {
+      type: Date,
+      default: null,
+    },
+
+    closedAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+
+
+dealSchema.index({ investor: 1, startup: 1 }, { unique: true,
+  partialFilterExpression: {
+      status: { $in: ["interested", "accepted"] },
+    },
+ });
+
+
 
 dealSchema.pre("save", function (next) {
-    if (this.isModified("status") && this.status === "closed") {
-        this.closedAt = new Date();
+  if (this.isModified("status")) {
+    if (this.status === "accepted") {
+      this.acceptedAt = new Date();
     }
-    next();
+
+    if (["rejected", "withdrawn", "closed"].includes(this.status)) {
+      this.closedAt = new Date();
+    }
+  }
+  return;
 });
 
+
+
+// get only active deals
 dealSchema.statics.getActiveDeals = function () {
-    return this.find({ status: { $ne: "closed" } });
+  return this.find({
+    status: { $in: ["interested", "accepted"] },
+  });
 };
 
+// check if deal is finished
 dealSchema.methods.isFinalized = function () {
-    return ["accepted", "rejected", "closed"].includes(this.status);
+  return ["rejected", "withdrawn", "closed"].includes(this.status);
 };
 
-export const Deal = mongoose.model("Deal", dealSchema);
+const Deal = mongoose.model("Deal", dealSchema);
+
+export default Deal;
