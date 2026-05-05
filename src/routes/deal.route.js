@@ -3,7 +3,7 @@ import { verifyJwt } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/roleAuth.middleware.js";
 import { createDealSchema , myDealQuerySchema , dealParamsSchema , updateDealSchema,dealQuerySchema} from "../validators/deal.validators.js";
 import { validate } from "../middlewares/validate.middleware.js";
-import { createDeal, getMyDeals , updateDealStatusByInvestor,getDealsForStartup } from "../controllers/deal.controller.js";
+import { createDeal, getMyDeals , updateDealStatusByInvestor,getDealsForStartup,updateDealStatusByStartup } from "../controllers/deal.controller.js";
 
 const router =Router();
 
@@ -32,6 +32,14 @@ router.route( "/startup").get(
   validate(dealQuerySchema, "query"), 
   getDealsForStartup
 );
+
+
+router.route("/:dealId/startup-action").patch( 
+    verifyJwt, 
+    authorizeRoles("startup"),
+    validate(dealParamsSchema, "params"),
+    validate(updateDealSchema, "body"),
+    updateDealStatusByStartup)
 
 
 export default router;

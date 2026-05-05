@@ -2,6 +2,7 @@ import User from "../models/user.model.js"
 import Startup from "../models/startup.model.js"
 import Deal from "../models/deal.model.js"
 import {INVESTOR_ACTIONS} from "../constants/deal.constant.js"
+import { STARTUP_ACTIONS } from "../constants/deal.constant.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/apiError.js"
 import { ApiResponse } from "../utils/apiResponse.js"
@@ -174,4 +175,49 @@ export const getDealsForStartup =asyncHandler(async(req,res)=>{
             "Deals fetched successfully"
         )
     )
+});
+
+export const updateDealStatusByStartup = asyncHandler(async (req, res) => {
+  const { dealId } = req.validatedData.params;
+  const { status } = req.validatedData.body;
+  const user = req.user;
+
+  const startup = await Startup.findOne({ founder: user._id });
+  if (!startup) {
+    throw new ApiError(404, "Startup not found for this user");
+  }
+
+  const deal = await Deal.findById(dealId);
+  if (!deal) {
+    throw new ApiError(404, "Deal not found");
+  }
+
+  if (deal.startup.toString() !== startup._id.toString()) {
+    throw new ApiError(403, "Not authorized to act on this deal");
+  }
+
+  const currentStatus = deal.status;
+
+  if (!STARTUP_ACTIONS[status]) {
+    throw new ApiError(400, "Invalid action for startup");
+  }
+
+  if (!STARTUP_ACTIONS[status].includes(currentStatus)) {
+    throw new ApiError(
+      400,
+      `Cannot ${action} deal when status is '${currentStatus}'`
+    );
+  }
+
+  if (status === "accept") {
+    deal.status = "accepted";
+  } else if (status === "reject") {
+    deal.status = "rejected";
+  }
+
+  await deal.save();
+
+  return res.status(200).json(
+    new ApiResponse(200, deal, `Deal ${status}ed successfully`)
+  );
 });
