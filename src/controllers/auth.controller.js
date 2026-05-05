@@ -5,13 +5,13 @@ import { ApiResponse } from "../utils/apiResponse.js";
 import { sendMail } from "../services/mail.service.js";
 import { generateOtp, getOtpExpiry, verifyOtp } from "../utils/otp.js";
 import { verificationEmailTemplate } from "../utils/emailTemplates.js";
-import cookieOptions from "../constants/constant.js"
+import cookieOptions from "../constants/auth.constant.js"
 import crypto from "crypto";
 
 //signin
 export const registerUser = asyncHandler(async (req, res) => {
 
-  const { name, email, password, role } = req.validatedData;
+  const { name, email, password, role } = req.validatedData.body;
 
   const existingUser = await User.findOne({ email });
   if (existingUser) throw new ApiError(409, "User with this email already exists");
@@ -58,7 +58,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 
 //verify-email-otp
 export const verifyEmail = asyncHandler(async (req, res) => {
-  const { email, otp } = req.validatedData;
+  const { email, otp } = req.validatedData.body;
   //fetch user 
   const user = await User.findOne({ email }).select("+otpHash");
   if (!user) throw new ApiError(404, "User not found");
@@ -107,7 +107,7 @@ export const verifyEmail = asyncHandler(async (req, res) => {
 //login
 
 export const logIn = asyncHandler(async (req, res) => {
-  const { email, password } = req.validatedData;
+  const { email, password } = req.validatedData.body;
 
   const user = await User.findOne({ email }).select("+password +refreshTokenHash");
   if (!user) throw new ApiError(404, "no user found with the email");
@@ -164,7 +164,7 @@ export const logOut = asyncHandler(async(req,res)=>{
 
 //resend-otp
 export const resendOtp = asyncHandler(async(req, res) => {
-  const { email } = req.validatedData;
+  const { email } = req.validatedData.body;
   const user = await User.findOne({ email }).select("+otpHash +otpSentAt");
 
   if (!user) {
