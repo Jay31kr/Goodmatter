@@ -5,7 +5,7 @@ import {
   StartupProfileSchema,
   updateProfileSchema,
   getStartupsQuerySchema
-} from "../validators/startUp.validators.js";
+} from "../validators/startup.validators.js";
 import {
   completeStartupProfile,
   updateStartupProfile,
