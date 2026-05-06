@@ -55,7 +55,7 @@ const slidingWindowLimiter = ({
             next();
         } catch (error) {
             console.log(`rate limiter error : ${error}`);
-            createContext(new ApiError(
+            next(new ApiError(
                 500,
                 "Ratelimitter flow error"
             ))
