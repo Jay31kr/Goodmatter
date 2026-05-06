@@ -4,30 +4,34 @@ import { authorizeRoles } from "../middlewares/roleAuth.middleware.js";
 import { createDealSchema , myDealQuerySchema , dealParamsSchema , updateDealSchema,dealQuerySchema} from "../validators/deal.validators.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { createDeal, getMyDeals , updateDealStatusByInvestor,getDealsForStartup,updateDealStatusByStartup } from "../controllers/deal.controller.js";
+import { perUserLimiter, sendInterestLimiter } from "../middlewares/rateLimiter.js";
 
 const router =Router();
 
+router.use(
+   verifyJwt,
+   perUserLimiter
+);
+
 router.route("/").post(
-    verifyJwt, 
+    sendInterestLimiter,
     authorizeRoles("investor"),
     validate(createDealSchema),
     createDeal);
 
 router.route("/me").get(
-    verifyJwt, 
     authorizeRoles("investor"), 
     validate(myDealQuerySchema , "query"), 
     getMyDeals);
 
 router.route("/:dealId/investor-action").patch( 
-    verifyJwt, 
+    sendInterestLimiter,
     authorizeRoles("investor"),
     validate(dealParamsSchema, "params"),
     validate(updateDealSchema, "body"),
     updateDealStatusByInvestor)
 
 router.route( "/startup").get(
-  verifyJwt,
   authorizeRoles("startup"),
   validate(dealQuerySchema, "query"), 
   getDealsForStartup
@@ -35,7 +39,6 @@ router.route( "/startup").get(
 
 
 router.route("/:dealId/startup-action").patch( 
-    verifyJwt, 
     authorizeRoles("startup"),
     validate(dealParamsSchema, "params"),
     validate(updateDealSchema, "body"),

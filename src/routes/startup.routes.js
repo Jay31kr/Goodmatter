@@ -16,20 +16,26 @@ import {
 } from "../controllers/startup.controller.js";
 import { authorizeRoles } from "../middlewares/roleAuth.middleware.js";
 import { upload } from "../middlewares/upload.middleware.js";
+import { perUserLimiter, pitchDeckLimiter } from "../middlewares/rateLimiter.js";
+
 
 const router = Router();
+
+
+router.use(
+  verifyJwt,
+  perUserLimiter
+);
 
 // Create + Update profile
 router
   .route("/")
   .post(
-    verifyJwt,
     authorizeRoles("startup"),
     validate(StartupProfileSchema),
     completeStartupProfile
   )
   .patch(
-    verifyJwt,
     authorizeRoles("startup"),
     validate(updateProfileSchema),
     updateStartupProfile
@@ -38,7 +44,6 @@ router
 // Get own startup
 router.get(
   "/me",
-  verifyJwt,
   authorizeRoles("startup"),
   getMyStartup
 );
@@ -47,13 +52,19 @@ router.get(
 router
   .route("/pitch-deck")
   .post(
-    verifyJwt,
+    pitchDeckLimiter,
+    authorizeRoles("startup"),
+    upload.single("pitchDeck"),
+    uploadPitchDeck
+  )
+  .patch(
+    pitchDeckLimiter,
     authorizeRoles("startup"),
     upload.single("pitchDeck"),
     uploadPitchDeck
   )
   .delete(
-    verifyJwt,
+    pitchDeckLimiter,
     authorizeRoles("startup"),
     deletePitchDeck
   );
@@ -61,7 +72,6 @@ router
   router
     .route("/startups")
     .get(
-        verifyJwt,
         authorizeRoles("investor"),
         validate(getStartupsQuerySchema , "query"),
         getStartups,
